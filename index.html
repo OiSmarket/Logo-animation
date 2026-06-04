@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Premium Loader v5 Magnifier</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,16 +50,36 @@
 
   var W, H, CX, CY;
   var LOGO_SIZE = 90;
+  var isMobile = false;
+  var scale = 1; // responsive scale factor
 
   function resize() {
     W = canvas.width = sc.width = window.innerWidth;
     H = canvas.height = sc.height = window.innerHeight;
     CX = W / 2; CY = H / 2;
+    isMobile = W < 600;
+    scale = Math.max(0.55, Math.min(1.0, W / 900));
+    if (sphere) {
+      sphere.ax = Math.round(180 * scale);
+      sphere.ay = Math.round(120 * scale);
+      sphere.radius = Math.round(42 * scale);
+    }
+    LOGO_SIZE = Math.round(90 * scale);
+    if (offCanvas) {
+      offCanvas.width = LOGO_SIZE; offCanvas.height = LOGO_SIZE;
+      if (logoLoaded) offCtx.drawImage(logoImg, 0, 0, LOGO_SIZE, LOGO_SIZE);
+    }
   }
-  resize();
+  // Initial basic resize (sphere/offCanvas not yet created)
+  W = canvas.width = sc.width = window.innerWidth;
+  H = canvas.height = sc.height = window.innerHeight;
+  CX = W / 2; CY = H / 2;
+  isMobile = W < 600;
+  scale = Math.max(0.55, Math.min(1.0, W / 900));
   window.addEventListener('resize', resize);
 
   // ── Speed state ────────────────────────────────────────────────────────────
+  // (defined before resize so resize can reference sphere/offCanvas)
   function makeSpeedState(base) {
     return { base: base, current: base, target: base*(0.3+Math.random()*2.5),
              timer: 0, interval: 20+Math.random()*60 };
@@ -117,12 +138,12 @@
 
   // ── SPHERE / MAGNIFIER ─────────────────────────────────────────────────────
   var sphere = {
-    ax: 180, ay: 120,
+    ax: Math.round(180 * scale), ay: Math.round(120 * scale),
     fx: 1.0, fy: 2.0,
     phase: 0,
     normalSpeed: makeSpeedState(0.008),
     currentSpeed: 0.008,
-    radius: 42,
+    radius: Math.round(42 * scale),
     x: 0, y: 0,
     particles: (function() {
       var arr = [];
