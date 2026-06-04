@@ -3,321 +3,324 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Modern Ocean Loader</title>
+  <title>Photorealistic Ocean</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #020e1c;
-      display: flex; align-items: center; justify-content: center;
-      height: 100vh; overflow: hidden;
-    }
-    canvas { position: fixed; inset: 0; }
-
+    body { background: #000; height: 100vh; overflow: hidden; }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
     #ui {
       position: fixed; inset: 0;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       pointer-events: none; z-index: 10;
-      gap: 0;
     }
-
-    /* Frosted glass card */
     #card {
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: clamp(24px, 5vw, 40px) clamp(32px, 7vw, 60px);
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 28px;
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      box-shadow:
-        0 8px 40px rgba(0,0,0,0.5),
-        inset 0 1px 0 rgba(255,255,255,0.12),
-        0 0 60px rgba(0,100,200,0.08);
-      gap: 20px;
+      align-items: center; gap: 16px;
+      padding: clamp(20px,4vw,36px) clamp(28px,6vw,52px);
+      background: rgba(2,14,30,0.45);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.1);
     }
-
     #logo {
-      width: clamp(56px, 11vw, 76px);
-      filter:
-        drop-shadow(0 0 16px rgba(191,150,115,0.85))
-        drop-shadow(0 4px 12px rgba(0,0,0,0.6));
-      animation: float 4s ease-in-out infinite;
+      width: clamp(54px,10vw,72px);
+      filter: drop-shadow(0 0 14px rgba(191,150,115,0.9)) drop-shadow(0 3px 10px rgba(0,0,0,0.8));
+      animation: float 5s ease-in-out infinite;
     }
     @keyframes float {
-      0%,100% { transform: translateY(0px) rotate(-1deg); }
-      50%      { transform: translateY(-8px) rotate(1deg); }
+      0%,100% { transform: translateY(0) rotate(-1.5deg); }
+      50%      { transform: translateY(-7px) rotate(1.5deg); }
     }
-
-    #dots {
-      display: flex; gap: 8px; align-items: center;
-    }
+    #dots { display: flex; gap: 7px; }
     .dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      animation: dotPulse 1.4s ease-in-out infinite;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(191,150,115,0.7);
+      animation: dp 1.5s ease-in-out infinite;
     }
-    .dot:nth-child(1){ background: #BF9673; animation-delay: 0s; }
-    .dot:nth-child(2){ background: rgba(191,150,115,0.6); animation-delay: 0.2s; }
-    .dot:nth-child(3){ background: rgba(191,150,115,0.35); animation-delay: 0.4s; }
-    @keyframes dotPulse {
-      0%,80%,100% { transform: scale(1); opacity: 0.5; }
-      40%          { transform: scale(1.5); opacity: 1; }
+    .dot:nth-child(2){ animation-delay:.2s; }
+    .dot:nth-child(3){ animation-delay:.4s; }
+    @keyframes dp {
+      0%,80%,100%{ transform:scale(1); opacity:.4; }
+      40%        { transform:scale(1.6); opacity:1; }
     }
-
-    #label {
-      font-family: 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
-      font-size: clamp(9px, 2vw, 11px);
-      font-weight: 400;
-      letter-spacing: 5px;
-      text-transform: uppercase;
-      color: rgba(180,220,255,0.35);
-    }
-
-    /* Wave progress bar */
-    #bar-wrap {
-      width: clamp(100px, 20vw, 150px);
-      height: 3px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    #bar {
-      height: 100%;
-      background: linear-gradient(90deg, #263466, #BF9673, #5ab4ff);
-      border-radius: 3px;
-      animation: barAnim 3s ease-in-out infinite;
-      box-shadow: 0 0 8px rgba(90,180,255,0.6);
-    }
-    @keyframes barAnim {
-      0%   { width: 0%;   opacity: 1; }
-      75%  { width: 100%; opacity: 1; }
-      90%  { width: 100%; opacity: 0; }
-      91%  { width: 0%;   opacity: 0; }
-      100% { width: 0%;   opacity: 1; }
+    #lbl {
+      font: 400 clamp(8px,1.8vw,10px)/1 'Helvetica Neue',Arial,sans-serif;
+      letter-spacing: 5px; text-transform: uppercase;
+      color: rgba(160,210,255,0.3);
     }
   </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-
 <div id="ui">
   <div id="card">
-    <img id="logo" src="logo.png" alt="logo" />
-    <div id="dots">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-    <div id="bar-wrap"><div id="bar"></div></div>
-    <div id="label">loading</div>
+    <img id="logo" src="logo.png" alt="">
+    <div id="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <div id="lbl">loading</div>
   </div>
 </div>
-
 <script>
 (function(){
-  const c = document.getElementById('c');
-  const ctx = c.getContext('2d');
-  let W, H, CX, CY, sc;
-  let t = 0;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  let W,H,t=0;
 
   function resize(){
-    W = c.width = window.innerWidth;
-    H = c.height = window.innerHeight;
-    CX = W/2; CY = H/2;
-    sc = Math.min(W,H)/700;
+    W = cv.width  = window.innerWidth;
+    H = cv.height = window.innerHeight;
   }
-  resize();
-  window.addEventListener('resize', resize);
+  resize(); window.addEventListener('resize', resize);
 
-  // ── Waves (3 clean layers) ────────────────────────────────────────────────
-  const waves = [
-    { amp: 38, freq: 0.008, spd: 1.1, yFrac: 0.62, color: [0,50,110],   a: 0.9 },
-    { amp: 28, freq: 0.012, spd: 1.6, yFrac: 0.66, color: [0,70,140],   a: 0.7 },
-    { amp: 18, freq: 0.018, spd: 2.2, yFrac: 0.70, color: [10,100,180], a: 0.5 },
-  ];
+  const sc = () => Math.min(W,H)/700;
 
-  // ── Foam particles on wave crests ─────────────────────────────────────────
-  const foam = Array.from({length: 35}, () => ({
-    x: Math.random() * 1,
-    phase: Math.random() * Math.PI * 2,
-    size: (1 + Math.random() * 2.5) * sc,
-    alpha: 0.2 + Math.random() * 0.5,
-    speed: 0.008 + Math.random() * 0.012
-  }));
-
-  // ── Underwater glow orbs ──────────────────────────────────────────────────
-  const orbs = Array.from({length: 5}, (_, i) => ({
-    x: 0.1 + (i/4)*0.8,
-    y: 0.72 + Math.random()*0.2,
-    r: (40 + Math.random()*60)*sc,
-    phase: Math.random()*Math.PI*2,
-    spd: 0.005 + Math.random()*0.008,
-    col: i%2===0 ? [0,120,220] : [0,80,160]
-  }));
-
-  // ── Bubbles ───────────────────────────────────────────────────────────────
-  const bubbles = Array.from({length: 25}, () => mkBubble(true));
-  function mkBubble(init){
-    return {
-      x: Math.random(),
-      y: init ? Math.random()*0.4 + 0.6 : 1.05,
-      r: (1 + Math.random()*3)*sc,
-      spd: 0.0006 + Math.random()*0.001,
-      wobble: Math.random()*Math.PI*2,
-      wSpd: 0.02 + Math.random()*0.03,
-      a: 0.15 + Math.random()*0.3
-    };
+  /* ── Perlin-like noise (simple) ─────────────────────────────────────── */
+  function noise(x,y,t){
+    return Math.sin(x*1.3+t)*Math.cos(y*0.9-t*0.7)
+          +Math.sin(x*2.7-t*1.1)*Math.cos(y*2.1+t*0.5)*0.5
+          +Math.sin(x*5.1+t*0.8)*Math.cos(y*4.3-t*1.3)*0.25;
   }
 
-  // ── Light rays ────────────────────────────────────────────────────────────
-  const rays = Array.from({length: 5}, (_, i) => ({
-    x: 0.2 + (i/4)*0.6,
-    w: 0.012 + Math.random()*0.02,
-    a: 0.025 + Math.random()*0.04,
-    phase: Math.random()*Math.PI*2,
-    spd: 0.003 + Math.random()*0.004
+  /* ── Stars ──────────────────────────────────────────────────────────── */
+  const stars = Array.from({length:120},()=>({
+    x:Math.random(), y:Math.random()*0.48,
+    r:0.3+Math.random()*1.1, a:0.1+Math.random()*0.7,
+    ph:Math.random()*Math.PI*2, sp:0.005+Math.random()*0.02
   }));
 
-  // ── Stars / sky ───────────────────────────────────────────────────────────
-  const stars = Array.from({length: 80}, () => ({
-    x: Math.random(), y: Math.random()*0.55,
-    r: 0.3 + Math.random()*0.9,
-    a: 0.1 + Math.random()*0.5,
-    phase: Math.random()*Math.PI*2,
-    spd: 0.01 + Math.random()*0.02
+  /* ── Moon ───────────────────────────────────────────────────────────── */
+  const moon = { x:0.75, y:0.14, r:26 };
+
+  /* ── Clouds ─────────────────────────────────────────────────────────── */
+  const clouds = Array.from({length:6},(_,i)=>({
+    x:Math.random(), y:0.08+Math.random()*0.28,
+    w:(120+Math.random()*180), h:(28+Math.random()*40),
+    spd:0.00008+Math.random()*0.00012,
+    a:0.04+Math.random()*0.09
   }));
 
-  function getWaveY(wave, x, time){
-    return wave.yFrac * H
-      + Math.sin(x * wave.freq + time * wave.spd) * wave.amp * sc
-      + Math.sin(x * wave.freq * 1.8 - time * wave.spd * 0.7) * wave.amp * 0.35 * sc;
+  /* ── Ocean surface grid (vertex displacement) ───────────────────────── */
+  const COLS = 80, ROWS = 30;
+
+  /* ── Foam streaks ───────────────────────────────────────────────────── */
+  const foamStreaks = Array.from({length:22},()=>({
+    x:Math.random(), y:0, len:0.04+Math.random()*0.1,
+    a:0.15+Math.random()*0.35, ph:Math.random()*Math.PI*2,
+    sp:0.006+Math.random()*0.01
+  }));
+
+  /* ── Bubbles ────────────────────────────────────────────────────────── */
+  const bubbles = Array.from({length:18},()=>mkB(true));
+  function mkB(init){
+    return { x:Math.random(), y:init?0.65+Math.random()*0.35:1.02,
+      r:(1+Math.random()*3), spd:0.0005+Math.random()*0.001,
+      wb:Math.random()*Math.PI*2, ws:0.02+Math.random()*0.03, a:0.1+Math.random()*0.3 };
+  }
+
+  /* ── Underwater caustics ────────────────────────────────────────────── */
+  const caustics = Array.from({length:14},()=>({
+    x:Math.random(), y:0.72+Math.random()*0.25,
+    r:(12+Math.random()*28), ph:Math.random()*Math.PI*2,
+    sp:0.007+Math.random()*0.01, a:0.03+Math.random()*0.06
+  }));
+
+  /* ── Horizon water line ─────────────────────────────────────────────── */
+  const HY = () => H * 0.52;
+
+  /* ── Get displaced ocean vertex ─────────────────────────────────────── */
+  function oceanY(x, row, time){
+    const frac = row / ROWS;
+    const depth = frac * frac; // perspective
+    const amp = (1-depth) * 42 * sc() + depth * 8 * sc();
+    const freq = 0.006 + depth * 0.01;
+    return HY() + frac*(H - HY())
+      + Math.sin(x*freq + time*1.2) * amp
+      + Math.sin(x*freq*1.9 - time*0.8) * amp*0.4
+      + Math.sin(x*freq*3.1 + time*1.7) * amp*0.2
+      + noise(x*0.003, frac*2, time*0.4) * amp*0.3;
+  }
+
+  /* ── Draw ocean mesh with normals-based shading ─────────────────────── */
+  function drawOcean(time){
+    const colW = W / COLS;
+
+    for(let row = 0; row < ROWS; row++){
+      const frac = row/ROWS;
+      const nextFrac = (row+1)/ROWS;
+
+      // Depth-based color
+      const r = Math.round(0  + frac*4);
+      const g = Math.round(30 + frac*20);
+      const b = Math.round(80 + frac*40);
+
+      for(let col = 0; col < COLS; col++){
+        const x0 = col*colW, x1 = (col+1)*colW;
+        const y00 = oceanY(x0, row,   time);
+        const y10 = oceanY(x1, row,   time);
+        const y01 = oceanY(x0, row+1, time);
+        const y11 = oceanY(x1, row+1, time);
+
+        // Normal-based brightness (cross product approximation)
+        const dx = y10 - y00;
+        const dy = colW;
+        const bright = Math.max(0, Math.min(1, 0.5 - dx/dy * 1.5));
+
+        // Specular highlight (moon reflection)
+        const mx = moon.x * W;
+        const midX = (x0+x1)/2, midY = (y00+y10)/2;
+        const dist = Math.hypot(midX-mx, midY-moon.y*H);
+        const spec = Math.max(0, 1 - dist/(W*0.35)) * 0.35 * (1-frac);
+
+        const alpha = 0.85 + frac*0.15;
+        const rr = Math.min(255, r + bright*40 + spec*120);
+        const gg = Math.min(255, g + bright*60 + spec*140);
+        const bb = Math.min(255, b + bright*80 + spec*160);
+
+        ctx.beginPath();
+        ctx.moveTo(x0,y00); ctx.lineTo(x1,y10);
+        ctx.lineTo(x1,y11); ctx.lineTo(x0,y01);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(${Math.round(rr)},${Math.round(gg)},${Math.round(bb)},${alpha})`;
+        ctx.fill();
+      }
+    }
+  }
+
+  /* ── Draw sky ───────────────────────────────────────────────────────── */
+  function drawSky(){
+    const g = ctx.createLinearGradient(0,0,0,HY());
+    g.addColorStop(0,   '#000508');
+    g.addColorStop(0.4, '#010d1c');
+    g.addColorStop(0.8, '#021830');
+    g.addColorStop(1,   '#031f3c');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,HY()+2);
+  }
+
+  /* ── Draw moon ──────────────────────────────────────────────────────── */
+  function drawMoon(){
+    const mx = moon.x*W, my = moon.y*H, mr = moon.r*sc();
+    // Outer atmospheric glow
+    const atm = ctx.createRadialGradient(mx,my,mr*0.8,mx,my,mr*5);
+    atm.addColorStop(0,'rgba(200,220,255,0.12)');
+    atm.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=atm; ctx.beginPath(); ctx.arc(mx,my,mr*5,0,Math.PI*2); ctx.fill();
+    // Moon body
+    const mg = ctx.createRadialGradient(mx-mr*0.2,my-mr*0.2,0,mx,my,mr);
+    mg.addColorStop(0,'rgba(255,255,240,1)');
+    mg.addColorStop(0.5,'rgba(230,235,210,0.95)');
+    mg.addColorStop(1,'rgba(180,190,160,0.6)');
+    ctx.fillStyle=mg; ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.fill();
+    // Craters
+    [[-0.3,0.2,0.18],[-0.25,0.35,0.12],[0.1,-0.3,0.09]].forEach(([cx,cy,cr])=>{
+      ctx.beginPath(); ctx.arc(mx+cx*mr,my+cy*mr,cr*mr,0,Math.PI*2);
+      ctx.fillStyle='rgba(160,170,140,0.25)'; ctx.fill();
+    });
+    // Water reflection column
+    const refW = mr*2.5;
+    const refG = ctx.createLinearGradient(mx,HY(),mx,H);
+    refG.addColorStop(0,'rgba(220,235,255,0.22)');
+    refG.addColorStop(0.3,'rgba(180,210,255,0.1)');
+    refG.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.save();
+    ctx.beginPath();
+    // Wavy reflection column
+    ctx.moveTo(mx-refW,HY());
+    for(let y=HY(); y<H; y+=4){
+      const frac=(y-HY())/(H-HY());
+      const ww=refW*(1+frac*1.5);
+      const wx=Math.sin(y*0.04+t*1.5)*ww*0.3;
+      ctx.lineTo(mx+wx+ww,y);
+    }
+    for(let y=H; y>=HY(); y-=4){
+      const frac=(y-HY())/(H-HY());
+      const ww=refW*(1+frac*1.5);
+      const wx=Math.sin(y*0.04+t*1.5)*ww*0.3;
+      ctx.lineTo(mx+wx-ww,y);
+    }
+    ctx.closePath();
+    ctx.fillStyle=refG; ctx.fill();
+    ctx.restore();
+  }
+
+  /* ── Draw clouds ────────────────────────────────────────────────────── */
+  function drawClouds(){
+    clouds.forEach(cl=>{
+      cl.x += cl.spd;
+      if(cl.x > 1.2) cl.x = -0.2;
+      const cx=cl.x*W, cy=cl.y*H;
+      // Multi-blob cloud
+      for(let i=0;i<5;i++){
+        const bx=cx+(i-2)*cl.w*0.18, by=cy+Math.sin(i*1.2)*cl.h*0.3;
+        const br=cl.h*(0.5+Math.sin(i*0.9)*0.2);
+        const bg=ctx.createRadialGradient(bx,by-br*0.2,0,bx,by,br);
+        bg.addColorStop(0,`rgba(180,200,230,${cl.a*1.2})`);
+        bg.addColorStop(1,'rgba(0,0,0,0)');
+        ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(bx,by,br,0,Math.PI*2); ctx.fill();
+      }
+    });
   }
 
   function loop(){
     ctx.clearRect(0,0,W,H);
-    t += 0.016;
+    t += 0.012;
+    const s = sc();
 
-    // ── Sky gradient ──────────────────────────────────────────────────────
-    const sky = ctx.createLinearGradient(0,0,0,H*0.65);
-    sky.addColorStop(0,   '#010810');
-    sky.addColorStop(0.5, '#021220');
-    sky.addColorStop(1,   '#031a30');
-    ctx.fillStyle = sky; ctx.fillRect(0,0,W,H*0.65);
+    drawSky();
 
-    // ── Stars ─────────────────────────────────────────────────────────────
-    stars.forEach(s => {
-      s.phase += s.spd;
-      const a = s.a * (0.5 + Math.sin(s.phase)*0.5);
-      ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r*sc, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(200,230,255,${a})`; ctx.fill();
+    // Stars
+    stars.forEach(st=>{
+      st.ph+=st.sp;
+      const a=st.a*(0.4+Math.sin(st.ph)*0.6);
+      ctx.beginPath(); ctx.arc(st.x*W,st.y*H,st.r*s,0,Math.PI*2);
+      ctx.fillStyle=`rgba(210,230,255,${a})`; ctx.fill();
     });
 
-    // ── Horizon glow ──────────────────────────────────────────────────────
-    const hg = ctx.createRadialGradient(CX, H*0.62, 0, CX, H*0.62, W*0.6);
-    hg.addColorStop(0,   'rgba(0,120,220,0.18)');
-    hg.addColorStop(0.4, 'rgba(0,60,140,0.08)');
-    hg.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = hg; ctx.fillRect(0,0,W,H);
+    drawMoon();
+    drawClouds();
+    drawOcean(t);
 
-    // ── Moon reflection ───────────────────────────────────────────────────
-    const moonX = W*0.72, moonY = H*0.18;
-    // Moon
-    const moonG = ctx.createRadialGradient(moonX,moonY,0,moonX,moonY,22*sc);
-    moonG.addColorStop(0,   'rgba(240,240,220,0.95)');
-    moonG.addColorStop(0.6, 'rgba(200,210,180,0.5)');
-    moonG.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = moonG; ctx.beginPath(); ctx.arc(moonX,moonY,22*sc,0,Math.PI*2); ctx.fill();
-    // Moon halo
-    const halo = ctx.createRadialGradient(moonX,moonY,18*sc,moonX,moonY,70*sc);
-    halo.addColorStop(0, 'rgba(200,220,255,0.08)');
-    halo.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(moonX,moonY,70*sc,0,Math.PI*2); ctx.fill();
-    // Reflection on water
-    const refG = ctx.createLinearGradient(moonX,H*0.6,moonX,H);
-    refG.addColorStop(0, 'rgba(200,220,255,0.18)');
-    refG.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = refG;
-    ctx.fillRect(moonX - 18*sc, H*0.6, 36*sc, H*0.4);
-
-    // ── Light rays underwater ─────────────────────────────────────────────
-    rays.forEach(r => {
-      r.phase += r.spd;
-      const a = r.a * (0.6 + Math.sin(r.phase)*0.4);
-      const x0 = r.x * W;
-      const rg = ctx.createLinearGradient(x0, H*0.62, x0 + 30*sc, H);
-      rg.addColorStop(0, `rgba(100,200,255,${a})`);
-      rg.addColorStop(1, `rgba(0,60,140,0)`);
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x0 - r.w*W, H*0.62);
-      ctx.lineTo(x0 + r.w*W, H*0.62);
-      ctx.lineTo(x0 + r.w*W + 20*sc, H);
-      ctx.lineTo(x0 - r.w*W + 20*sc, H);
-      ctx.closePath();
-      ctx.fillStyle = rg; ctx.fill();
-      ctx.restore();
+    // Caustics
+    caustics.forEach(ca=>{
+      ca.ph+=ca.sp;
+      const pulse=0.7+Math.sin(ca.ph)*0.3;
+      const cg=ctx.createRadialGradient(ca.x*W,ca.y*H,0,ca.x*W,ca.y*H,ca.r*s*pulse);
+      cg.addColorStop(0,`rgba(80,180,255,${ca.a})`);
+      cg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(ca.x*W,ca.y*H,ca.r*s*pulse,0,Math.PI*2); ctx.fill();
     });
 
-    // ── Underwater body ───────────────────────────────────────────────────
-    const sea = ctx.createLinearGradient(0, H*0.62, 0, H);
-    sea.addColorStop(0,   '#042040');
-    sea.addColorStop(0.4, '#031830');
-    sea.addColorStop(1,   '#010c1a');
-    ctx.fillStyle = sea; ctx.fillRect(0, H*0.62, W, H*0.38);
-
-    // ── Glow orbs ─────────────────────────────────────────────────────────
-    orbs.forEach(o => {
-      o.phase += o.spd;
-      const pulse = 0.7 + Math.sin(o.phase)*0.3;
-      const og = ctx.createRadialGradient(o.x*W, o.y*H, 0, o.x*W, o.y*H, o.r*pulse);
-      og.addColorStop(0, `rgba(${o.col[0]},${o.col[1]},${o.col[2]},0.12)`);
-      og.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = og; ctx.beginPath(); ctx.arc(o.x*W,o.y*H,o.r*pulse,0,Math.PI*2); ctx.fill();
+    // Foam streaks on surface
+    foamStreaks.forEach(f=>{
+      f.ph+=f.sp;
+      f.y = (oceanY(f.x*W, 0, t) / H);
+      const a=f.a*(0.4+Math.sin(f.ph)*0.6);
+      const x0=f.x*W, x1=(f.x+f.len)*W;
+      const fg=ctx.createLinearGradient(x0,0,x1,0);
+      fg.addColorStop(0,'rgba(255,255,255,0)');
+      fg.addColorStop(0.3,`rgba(255,255,255,${a})`);
+      fg.addColorStop(0.7,`rgba(255,255,255,${a*0.6})`);
+      fg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.strokeStyle=fg; ctx.lineWidth=1.2*s;
+      ctx.beginPath(); ctx.moveTo(x0,f.y*H); ctx.lineTo(x1,f.y*H); ctx.stroke();
     });
 
-    // ── Bubbles ───────────────────────────────────────────────────────────
-    bubbles.forEach((b,i) => {
-      b.y -= b.spd; b.wobble += b.wSpd;
-      b.x += Math.sin(b.wobble)*0.0005;
-      if(b.y < 0.58) bubbles[i] = mkBubble(false);
-      ctx.beginPath(); ctx.arc(b.x*W, b.y*H, b.r, 0, Math.PI*2);
-      ctx.strokeStyle = `rgba(150,210,255,${b.a})`; ctx.lineWidth = 0.8; ctx.stroke();
-      ctx.beginPath(); ctx.arc(b.x*W - b.r*0.3, b.y*H - b.r*0.3, b.r*0.25, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(255,255,255,${b.a*0.5})`; ctx.fill();
+    // Bubbles
+    bubbles.forEach((b,i)=>{
+      b.y-=b.spd; b.wb+=b.ws; b.x+=Math.sin(b.wb)*0.0004;
+      if(b.y<0.5) bubbles[i]=mkB(false);
+      ctx.beginPath(); ctx.arc(b.x*W,b.y*H,b.r*s,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(160,220,255,${b.a})`; ctx.lineWidth=0.7; ctx.stroke();
+      ctx.beginPath(); ctx.arc(b.x*W-b.r*s*0.3,b.y*H-b.r*s*0.3,b.r*s*0.22,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${b.a*0.5})`; ctx.fill();
     });
 
-    // ── Wave layers ───────────────────────────────────────────────────────
-    waves.forEach(w => {
-      ctx.beginPath(); ctx.moveTo(0, H);
-      for(let x=0; x<=W; x+=4){
-        ctx.lineTo(x, getWaveY(w, x, t));
-      }
-      ctx.lineTo(W,H); ctx.closePath();
-      ctx.fillStyle = `rgba(${w.color[0]},${w.color[1]},${w.color[2]},${w.a})`;
-      ctx.fill();
-    });
-
-    // ── Foam on top wave ──────────────────────────────────────────────────
-    foam.forEach(f => {
-      f.phase += f.speed;
-      const wy = getWaveY(waves[0], f.x*W, t);
-      const a = f.alpha * (0.5 + Math.sin(f.phase)*0.5);
-      ctx.beginPath(); ctx.arc(f.x*W, wy - 1*sc, f.size, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(220,240,255,${a})`; ctx.fill();
-    });
-
-    // ── Surface shimmer ───────────────────────────────────────────────────
-    for(let i=0; i<8; i++){
-      const sx = ((Math.sin(t*0.9+i*0.8)*0.3+0.5))*W;
-      const wy = getWaveY(waves[0], sx, t);
-      const sw = (15+Math.sin(t+i)*8)*sc;
-      const sg = ctx.createLinearGradient(sx-sw,wy,sx+sw,wy);
-      sg.addColorStop(0,'rgba(255,255,255,0)');
-      sg.addColorStop(0.5,`rgba(255,255,255,${0.08+Math.sin(t*1.5+i)*0.04})`);
-      sg.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle = sg; ctx.fillRect(sx-sw, wy-2*sc, sw*2, 4*sc);
-    }
+    // Deep water fade
+    const deep=ctx.createLinearGradient(0,H*0.8,0,H);
+    deep.addColorStop(0,'rgba(0,0,0,0)');
+    deep.addColorStop(1,'rgba(0,5,12,0.75)');
+    ctx.fillStyle=deep; ctx.fillRect(0,H*0.8,W,H*0.2);
 
     requestAnimationFrame(loop);
   }
