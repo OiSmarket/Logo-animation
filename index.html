@@ -1,223 +1,290 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Premium Loader Alternative</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ocean Loader</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      background: #05050f;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      overflow: hidden;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #020d1a;
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; overflow: hidden;
+      font-family: 'Georgia', serif;
     }
     canvas { position: fixed; inset: 0; }
     #ui {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 10;
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      pointer-events: none; z-index: 10;
     }
     #logo-wrap {
       position: relative;
-      width: 110px;
-      height: 110px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
-    #logo-img {
-      width: clamp(65px, 15vw, 80px);
-      height: auto;
-      object-fit: contain;
-      filter: drop-shadow(0 0 18px rgba(191,150,115,0.9));
-      animation: logoPulse 3s ease-in-out infinite;
+    #logo {
+      width: clamp(60px, 12vw, 85px);
+      filter:
+        drop-shadow(0 0 12px rgba(191,150,115,0.9))
+        drop-shadow(0 2px 8px rgba(0,0,0,0.8));
+      animation: sway 4s ease-in-out infinite;
+      transform-origin: center bottom;
     }
-    @keyframes logoPulse {
-      0%,100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(191,150,115,0.7)); }
-      50%      { transform: scale(1.06); filter: drop-shadow(0 0 25px rgba(199,33,44,0.6)); }
+    @keyframes sway {
+      0%,100% { transform: rotate(-2deg) translateY(0px); }
+      25%      { transform: rotate(1.5deg) translateY(-4px); }
+      50%      { transform: rotate(2deg) translateY(-2px); }
+      75%      { transform: rotate(-1deg) translateY(-5px); }
     }
-    #brand {
-      margin-top: 25px;
-      text-align: center;
-    }
-    #brand-name {
-      font-size: clamp(14px, 4vw, 18px);
-      font-weight: 700;
-      letter-spacing: 12px;
+    #text {
+      margin-top: 28px;
+      font-size: clamp(10px, 2.5vw, 12px);
+      letter-spacing: 8px;
+      color: rgba(180,220,255,0.5);
       text-transform: uppercase;
-      background: linear-gradient(90deg, #BF9673, #fff, #BF9673);
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: shimmer 3s linear infinite;
+      font-family: 'Courier New', monospace;
+      animation: fadeWave 3s ease-in-out infinite;
     }
-    @keyframes shimmer {
-      0%   { background-position: 0% center; }
-      100% { background-position: 200% center; }
-    }
-    #progress-wrap {
-      margin-top: 25px;
-      width: clamp(100px, 25vw, 160px);
-      height: 1px;
-      background: rgba(255,255,255,0.05);
-      overflow: hidden;
-    }
-    #progress-bar {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, #BF9673, #C7212C);
-      animation: progressAnim 3.5s ease-in-out infinite;
-      box-shadow: 0 0 8px rgba(191,150,115,0.6);
-    }
-    @keyframes progressAnim {
-      0%   { width: 0%;   opacity: 0.8; }
-      70%  { width: 100%; opacity: 0.8; }
-      85%  { width: 100%; opacity: 0; }
-      100% { width: 0%;   opacity: 0; }
+    @keyframes fadeWave {
+      0%,100% { opacity: 0.4; letter-spacing: 8px; }
+      50%      { opacity: 0.8; letter-spacing: 10px; }
     }
   </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-
 <div id="ui">
   <div id="logo-wrap">
-    <img id="logo-img" src="logo.png" alt="logo" />
+    <img id="logo" src="logo.png" alt="logo" />
   </div>
-  <div id="brand">
-    <div id="brand-name">LOADING</div>
-  </div>
-  <div id="progress-wrap">
-    <div id="progress-bar"></div>
-  </div>
+  <div id="text">loading</div>
 </div>
-
 <script>
 (function(){
-  const canvas = document.getElementById('c');
-  const ctx = canvas.getContext('2d');
-  let W, H, CX, CY, scale;
+  const c = document.getElementById('c');
+  const ctx = c.getContext('2d');
+  let W, H, CX, CY, sc;
   let t = 0;
 
-  function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
+  function resize(){
+    W = c.width = window.innerWidth;
+    H = c.height = window.innerHeight;
     CX = W/2; CY = H/2;
-    scale = Math.max(0.45, Math.min(1.0, W / 800));
+    sc = Math.min(W,H)/700;
   }
   resize();
   window.addEventListener('resize', resize);
 
-  // DNA Helix
-  const DNA_COUNT = 30;
-  const dnaPoints = Array.from({length: DNA_COUNT}, (_, i) => ({
-    phase: (i / DNA_COUNT) * Math.PI * 4,
-    speed: 0.01 + Math.random() * 0.005,
-    size: 2 + Math.random() * 2,
-    strand: i % 2, 
-    trail: []
+  // ── Waves ─────────────────────────────────────────────────────────────────
+  const WAVE_LAYERS = [
+    { amp: 28, freq: 0.012, speed: 0.018, y: 0.52, color: 'rgba(0,60,120,0.55)',    blur: 0 },
+    { amp: 22, freq: 0.016, speed: 0.025, y: 0.55, color: 'rgba(0,80,150,0.45)',    blur: 0 },
+    { amp: 18, freq: 0.020, speed: 0.032, y: 0.57, color: 'rgba(10,100,180,0.35)',  blur: 0 },
+    { amp: 14, freq: 0.026, speed: 0.042, y: 0.59, color: 'rgba(30,130,200,0.25)',  blur: 0 },
+    { amp: 10, freq: 0.034, speed: 0.055, y: 0.61, color: 'rgba(60,160,220,0.18)',  blur: 0 },
+    { amp:  7, freq: 0.045, speed: 0.07,  y: 0.63, color: 'rgba(100,190,240,0.12)', blur: 0 },
+  ];
+
+  // ── Bubbles ───────────────────────────────────────────────────────────────
+  const bubbles = Array.from({length: 40}, () => spawnBubble(true));
+  function spawnBubble(init){
+    return {
+      x: Math.random() * 1.4 - 0.2,
+      y: init ? Math.random() : 1.05,
+      r: (1.5 + Math.random() * 4) * sc,
+      speed: 0.0008 + Math.random() * 0.0015,
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpeed: 0.02 + Math.random() * 0.03,
+      alpha: 0.1 + Math.random() * 0.35
+    };
+  }
+
+  // ── Light rays ────────────────────────────────────────────────────────────
+  const rays = Array.from({length: 7}, (_, i) => ({
+    angle: -0.3 + (i/6)*0.6,
+    width: 0.015 + Math.random()*0.025,
+    alpha: 0.03 + Math.random()*0.06,
+    speed: 0.0005 + Math.random()*0.001,
+    phase: Math.random()*Math.PI*2
   }));
 
-  // Ripples
-  const ripples = [];
-  let rippleTimer = 0;
-
-  // Background particles
-  const particles = Array.from({length: 50}, (_, i) => ({
-    x: (Math.random()-0.5)*W*1.5,
-    y: (Math.random()-0.5)*H*1.5,
-    vx: (Math.random()-0.5)*0.2,
-    vy: (Math.random()-0.5)*0.2,
-    r: 0.5 + Math.random(),
-    alpha: 0.1 + Math.random()*0.3,
-    col: i%2===0?'191,150,115':'199,33,44'
+  // ── Caustics (light patterns on sea floor) ────────────────────────────────
+  const caustics = Array.from({length: 18}, () => ({
+    x: Math.random(),
+    y: 0.65 + Math.random()*0.35,
+    r: (8 + Math.random()*20) * sc,
+    phase: Math.random()*Math.PI*2,
+    speed: 0.008 + Math.random()*0.012,
+    alpha: 0.04 + Math.random()*0.08
   }));
 
-  function loop() {
+  // ── Particles (plankton) ──────────────────────────────────────────────────
+  const plankton = Array.from({length: 60}, () => ({
+    x: Math.random(),
+    y: Math.random(),
+    vx: (Math.random()-0.5)*0.0003,
+    vy: -0.0001 - Math.random()*0.0003,
+    r: 0.5 + Math.random()*1.5,
+    alpha: 0.1 + Math.random()*0.4,
+    phase: Math.random()*Math.PI*2
+  }));
+
+  // ── Fish silhouettes ──────────────────────────────────────────────────────
+  const fish = Array.from({length: 5}, (_, i) => ({
+    x: Math.random(),
+    y: 0.35 + Math.random()*0.25,
+    speed: (0.0008 + Math.random()*0.001) * (Math.random()>0.5?1:-1),
+    size: (8 + Math.random()*14) * sc,
+    alpha: 0.06 + Math.random()*0.1,
+    tailPhase: Math.random()*Math.PI*2
+  }));
+
+  function drawFish(f){
+    const x = f.x * W, y = f.y * H;
+    const dir = f.speed > 0 ? 1 : -1;
+    const tail = Math.sin(f.tailPhase) * 0.3;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(dir, 1);
+    ctx.fillStyle = `rgba(100,180,255,${f.alpha})`;
+    // Body
+    ctx.beginPath();
+    ctx.ellipse(0, 0, f.size, f.size*0.4, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Tail
+    ctx.beginPath();
+    ctx.moveTo(-f.size*0.85, 0);
+    ctx.lineTo(-f.size*1.5, -f.size*0.5 + tail*f.size);
+    ctx.lineTo(-f.size*1.5,  f.size*0.5 + tail*f.size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawWave(layer, time){
+    const yBase = layer.y * H;
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for(let x = 0; x <= W; x += 3){
+      const y = yBase
+        + Math.sin(x * layer.freq + time * layer.speed * 60) * layer.amp * sc
+        + Math.sin(x * layer.freq * 1.7 - time * layer.speed * 40) * layer.amp * 0.4 * sc;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fillStyle = layer.color;
+    ctx.fill();
+  }
+
+  function loop(){
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle = '#05050f';
-    ctx.fillRect(0,0,W,H);
+    t += 0.016;
 
-    t += 0.012;
+    // ── Sky / deep water gradient ──────────────────────────────────────────
+    const sky = ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,    '#020d1a');
+    sky.addColorStop(0.35, '#041828');
+    sky.addColorStop(0.5,  '#062035');
+    sky.addColorStop(0.65, '#041525');
+    sky.addColorStop(1,    '#020a14');
+    ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
 
-    // Center Atmosphere
-    const glow = ctx.createRadialGradient(CX,CY,0,CX,CY,250*scale);
-    glow.addColorStop(0, 'rgba(38,52,102,0.3)');
-    glow.addColorStop(1, 'rgba(5,5,15,0)');
-    ctx.fillStyle = glow; ctx.fillRect(0,0,W,H);
-
-    // BG Stars
-    particles.forEach(p => {
-      p.x += p.vx; p.y += p.vy;
-      if(Math.abs(p.x) > W) p.x *= -0.8;
-      if(Math.abs(p.y) > H) p.y *= -0.8;
+    // ── Light rays from surface ────────────────────────────────────────────
+    rays.forEach(r => {
+      r.phase += r.speed;
+      const alpha = r.alpha * (0.7 + Math.sin(r.phase)*0.3);
+      const x0 = CX + Math.sin(r.angle)*W*0.3;
+      const grad = ctx.createLinearGradient(x0, 0, x0 + Math.sin(r.angle)*H*0.6, H);
+      grad.addColorStop(0, `rgba(100,200,255,${alpha})`);
+      grad.addColorStop(1, `rgba(0,80,160,0)`);
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(CX+p.x, CY+p.y, p.r, 0, Math.PI*2);
-      ctx.fillStyle = `rgba(${p.col}, ${p.alpha})`;
+      ctx.moveTo(x0 - r.width*W, 0);
+      ctx.lineTo(x0 + r.width*W, 0);
+      ctx.lineTo(x0 + r.width*W + Math.sin(r.angle)*H*0.8, H);
+      ctx.lineTo(x0 - r.width*W + Math.sin(r.angle)*H*0.8, H);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // ── Caustics ──────────────────────────────────────────────────────────
+    caustics.forEach(ca => {
+      ca.phase += ca.speed;
+      const pulse = 0.7 + Math.sin(ca.phase)*0.3;
+      const x = ca.x*W, y = ca.y*H;
+      const g = ctx.createRadialGradient(x,y,0,x,y,ca.r*pulse);
+      g.addColorStop(0, `rgba(100,200,255,${ca.alpha})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x,y,ca.r*pulse,0,Math.PI*2); ctx.fill();
+    });
+
+    // ── Plankton ──────────────────────────────────────────────────────────
+    plankton.forEach(p => {
+      p.x += p.vx + Math.sin(p.phase + t)*0.0001;
+      p.y += p.vy;
+      p.phase += 0.03;
+      if(p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+      const glow = 0.6 + Math.sin(p.phase)*0.4;
+      ctx.beginPath();
+      ctx.arc(p.x*W, p.y*H, p.r*sc, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(120,220,255,${p.alpha*glow})`;
       ctx.fill();
     });
 
-    ctx.save(); ctx.translate(CX, CY);
-
-    // Moving Rings (Liquid Metal)
-    for(let rIdx=0; rIdx<2; rIdx++) {
-      const dir = rIdx===0 ? 1 : -1;
-      const baseR = (rIdx===0 ? 110 : 85) * scale;
-      ctx.beginPath();
-      for(let i=0; i<=180; i++) {
-        const a = (i/180)*Math.PI*2;
-        const wave = Math.sin(a*5 + t*3*dir)*6*scale + Math.sin(a*3 - t*dir)*4*scale;
-        const rr = baseR + wave;
-        const x = Math.cos(a)*rr, y = Math.sin(a)*rr;
-        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-      }
-      ctx.closePath();
-      ctx.strokeStyle = rIdx===0 ? 'rgba(191,150,115,0.7)' : 'rgba(199,33,44,0.4)';
-      ctx.lineWidth = 1.5;
-      if(rIdx===0) { ctx.shadowColor = 'rgba(191,150,115,0.8)'; ctx.shadowBlur = 15; }
-      ctx.stroke(); ctx.shadowBlur = 0;
-    }
-
-    // DNA Helix Points
-    const hR = 90*scale, hH = 45*scale;
-    dnaPoints.forEach(p => {
-      p.phase += p.speed;
-      const x = Math.cos(p.phase)*hR, y = Math.sin(p.phase*0.6)*hH, z = Math.sin(p.phase);
-      const alpha = 0.3 + z*0.7, sz = p.size * (0.7 + z*0.5) * scale;
-      const col = p.strand === 0 ? '191,150,115' : '199,33,44';
-
-      ctx.beginPath();
-      ctx.arc(x,y,sz,0,Math.PI*2);
-      ctx.fillStyle = `rgba(${col}, ${alpha})`;
-      if(z > 0) { ctx.shadowColor = `rgba(${col}, 1)`; ctx.shadowBlur = 10; }
-      ctx.fill(); ctx.shadowBlur = 0;
+    // ── Fish ──────────────────────────────────────────────────────────────
+    fish.forEach(f => {
+      f.x += f.speed;
+      f.tailPhase += 0.08;
+      if(f.x > 1.1) f.x = -0.1;
+      if(f.x < -0.1) f.x = 1.1;
+      drawFish(f);
     });
 
-    ctx.restore();
+    // ── Wave layers ───────────────────────────────────────────────────────
+    WAVE_LAYERS.forEach(layer => drawWave(layer, t));
 
-    // Subtle Ripple
-    rippleTimer++;
-    if(rippleTimer > 110) { 
-      ripples.push({r: 0, a: 0.5}); 
-      rippleTimer=0; 
+    // ── Surface shimmer ───────────────────────────────────────────────────
+    const shimmerY = WAVE_LAYERS[0].y * H;
+    for(let i=0; i<6; i++){
+      const sx = (Math.sin(t*1.2 + i*1.1)*0.3 + 0.5)*W;
+      const sw = (20 + Math.sin(t+i)*15)*sc;
+      const sg = ctx.createLinearGradient(sx-sw,shimmerY,sx+sw,shimmerY);
+      sg.addColorStop(0,'rgba(255,255,255,0)');
+      sg.addColorStop(0.5,`rgba(255,255,255,${0.06+Math.sin(t*2+i)*0.03})`);
+      sg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(sx-sw, shimmerY-2*sc, sw*2, 4*sc);
     }
-    ripples.forEach((r, i) => {
-      r.r += 1.5; r.a -= 0.005;
-      if(r.a <= 0) ripples.splice(i,1);
-      ctx.beginPath(); ctx.arc(CX,CY,r.r,0,Math.PI*2);
-      ctx.strokeStyle = `rgba(191,150,115,${r.a})`;
+
+    // ── Bubbles ───────────────────────────────────────────────────────────
+    for(let i=bubbles.length-1; i>=0; i--){
+      const b = bubbles[i];
+      b.y -= b.speed;
+      b.wobble += b.wobbleSpeed;
+      b.x += Math.sin(b.wobble)*0.0008;
+      if(b.y < -0.02) bubbles[i] = spawnBubble(false);
+      const bx = b.x*W, by = b.y*H;
+      // Bubble outline
+      ctx.beginPath(); ctx.arc(bx, by, b.r, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(180,230,255,${b.alpha})`;
+      ctx.lineWidth = 0.8;
       ctx.stroke();
-    });
+      // Highlight
+      ctx.beginPath(); ctx.arc(bx - b.r*0.3, by - b.r*0.3, b.r*0.25, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${b.alpha*0.6})`;
+      ctx.fill();
+    }
+
+    // ── Underwater fog at bottom ──────────────────────────────────────────
+    const fog = ctx.createLinearGradient(0, H*0.75, 0, H);
+    fog.addColorStop(0, 'rgba(2,10,25,0)');
+    fog.addColorStop(1, 'rgba(2,8,18,0.7)');
+    ctx.fillStyle = fog; ctx.fillRect(0, H*0.75, W, H*0.25);
 
     requestAnimationFrame(loop);
   }
