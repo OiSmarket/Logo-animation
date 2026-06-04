@@ -2,25 +2,327 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>AVINO — Легализация</title>
-  <link rel="stylesheet" href="style.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Premium Loader v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080810;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+    .ui {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      pointer-events: none;
+    }
+    .eyebrow {
+      font-size: 10px;
+      letter-spacing: 7px;
+      text-transform: uppercase;
+      color: rgba(191,150,115,0.5);
+      animation: fadeUp 1s ease both;
+    }
+    .brand {
+      font-size: 58px;
+      font-weight: 300;
+      color: #fff;
+      letter-spacing: 12px;
+      text-transform: uppercase;
+      animation: fadeUp 1.2s ease both;
+    }
+    .brand em { font-style: normal; color: #BF9673; }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: fadeUp 1.4s ease both;
+    }
+    .divider-line {
+      width: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #BF9673);
+      animation: growLine 1.8s 0.6s ease forwards;
+    }
+    .divider-line.right { background: linear-gradient(90deg, #BF9673, transparent); }
+    .divider-diamond {
+      width: 5px; height: 5px;
+      background: #C7212C;
+      transform: rotate(45deg);
+      box-shadow: 0 0 8px #C7212C;
+    }
+    @keyframes growLine { to { width: 80px; } }
+    .sub {
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: rgba(255,255,255,0.25);
+      text-transform: uppercase;
+      animation: fadeUp 1.6s ease both;
+    }
+    .status {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: rgba(191,150,115,0.4);
+      text-transform: uppercase;
+      animation: fadeUp 1.8s ease both, pulse 2.5s 2s ease-in-out infinite;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 0.4; }
+      50%      { opacity: 0.9; }
+    }
+  </style>
 </head>
 <body>
-<div class="loader-container">
-  <!-- Анимированный фон (замена канвасу) -->
-  <div class="aurora"></div>
-  
-  <div class="ui">
-    <div class="eyebrow">Легализация в Польше</div>
-    <div class="brand">AVI<span>N</span>O</div>
-    <div class="divider">
-      <div class="divider-line"></div>
-      <div class="divider-diamond"></div>
-      <div class="divider-line right"></div>
-    </div>
-    <div class="sub">Польша · Украина · Документы</div>
-    <div class="status">Загрузка...</div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <div class="eyebrow">Легализация в Польше</div>
+  <div class="brand">AVI<em>N</em>O</div>
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-diamond"></div>
+    <div class="divider-line right"></div>
   </div>
+  <div class="sub">Польша · Украина · Документы</div>
+  <div class="status">Загрузка...</div>
 </div>
+
+<script>
+(function() {
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var W, H, CX, CY;
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    CX = W / 2;
+    CY = H / 2;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  var bands = [];
+  for (var i = 0; i < 6; i++) {
+    bands.push({
+      offset: i * 0.9,
+      speed: 0.003 + i * 0.001,
+      color: i % 2 === 0 ? [38, 52, 102] : [191, 150, 115],
+      amp: 60 + i * 15,
+      freq: 0.6 + i * 0.2,
+      alpha: 0.04 + i * 0.01
+    });
+  }
+
+  var RING_N = 200;
+  var ringPhase = 0;
+
+  var stars = [];
+  for (var j = 0; j < 80; j++) {
+    stars.push({
+      x: Math.random() * 2000 - 1000,
+      y: Math.random() * 2000 - 1000,
+      r: Math.random() * 1.2 + 0.3,
+      alpha: 0.1 + Math.random() * 0.4,
+      twinkle: Math.random() * Math.PI * 2,
+      speed: 0.01 + Math.random() * 0.03
+    });
+  }
+
+  var streaks = [];
+  for (var k = 0; k < 12; k++) {
+    streaks.push({
+      angle: (k / 12) * Math.PI * 2,
+      len: 30 + Math.random() * 50,
+      speed: 0.004 + Math.random() * 0.006,
+      r: 170 + Math.random() * 40,
+      alpha: 0.15 + Math.random() * 0.25,
+      isRed: k % 3 === 0
+    });
+  }
+
+  var orbs = [];
+  for (var m = 0; m < 5; m++) {
+    orbs.push({
+      angle: (m / 5) * Math.PI * 2,
+      r: 100 + m * 18,
+      speed: 0.006 + m * 0.002,
+      size: 3 + m * 1.5,
+      isRed: m % 2 !== 0
+    });
+  }
+
+  var t = 0;
+
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#080810';
+    ctx.fillRect(0, 0, W, H);
+
+    t += 0.01;
+    ringPhase += 0.018;
+
+    // Aurora
+    for (var bi = 0; bi < bands.length; bi++) {
+      var b = bands[bi];
+      b.offset += b.speed;
+      ctx.beginPath();
+      ctx.moveTo(0, CY);
+      for (var x = 0; x <= W; x += 4) {
+        var y = CY
+          + Math.sin((x / W) * Math.PI * b.freq + b.offset + t) * b.amp
+          + Math.sin((x / W) * Math.PI * b.freq * 2 + b.offset * 1.3) * b.amp * 0.4;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(' + b.color[0] + ',' + b.color[1] + ',' + b.color[2] + ',' + b.alpha + ')';
+      ctx.fill();
+    }
+
+    // Center glow
+    var cg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 320);
+    cg.addColorStop(0, 'rgba(38,52,102,0.35)');
+    cg.addColorStop(0.4, 'rgba(191,150,115,0.06)');
+    cg.addColorStop(1, 'rgba(8,8,16,0)');
+    ctx.fillStyle = cg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    for (var si = 0; si < stars.length; si++) {
+      var s = stars[si];
+      s.twinkle += s.speed;
+      var sa = s.alpha * (0.5 + Math.sin(s.twinkle) * 0.5);
+      ctx.beginPath();
+      ctx.arc(CX + s.x, CY + s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + sa.toFixed(3) + ')';
+      ctx.fill();
+    }
+
+    // Liquid ring
+    ctx.save();
+    ctx.translate(CX, CY);
+
+    var halo = ctx.createRadialGradient(0, 0, 85, 0, 0, 140);
+    halo.addColorStop(0, 'rgba(191,150,115,0)');
+    halo.addColorStop(0.5, 'rgba(191,150,115,0.08)');
+    halo.addColorStop(1, 'rgba(8,8,16,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(0, 0, 140, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    for (var ri = 0; ri <= RING_N; ri++) {
+      var ra = (ri / RING_N) * Math.PI * 2;
+      var wave = Math.sin(ra * 4 + ringPhase) * 10
+               + Math.sin(ra * 7 - ringPhase * 1.3) * 5
+               + Math.sin(ra * 2 + t) * 7;
+      var rr = 100 + wave;
+      var rx = Math.cos(ra) * rr;
+      var ry = Math.sin(ra) * rr;
+      ri === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
+    }
+    ctx.closePath();
+    var ringGrad = ctx.createLinearGradient(-100, -100, 100, 100);
+    ringGrad.addColorStop(0,   'rgba(191,150,115,1)');
+    ringGrad.addColorStop(0.3, 'rgba(199,33,44,0.9)');
+    ringGrad.addColorStop(0.6, 'rgba(191,150,115,0.7)');
+    ringGrad.addColorStop(1,   'rgba(38,52,102,0.5)');
+    ctx.strokeStyle = ringGrad;
+    ctx.lineWidth = 1.8;
+    ctx.shadowColor = 'rgba(191,150,115,0.8)';
+    ctx.shadowBlur = 22;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    for (var ii = 0; ii <= RING_N; ii++) {
+      var ia = (ii / RING_N) * Math.PI * 2;
+      var iwave = Math.sin(ia * 5 - ringPhase * 1.1) * 6
+                + Math.sin(ia * 3 + ringPhase * 0.7) * 4;
+      var irr = 72 + iwave;
+      var ix = Math.cos(ia) * irr;
+      var iy = Math.sin(ia) * irr;
+      ii === 0 ? ctx.moveTo(ix, iy) : ctx.lineTo(ix, iy);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(199,33,44,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+
+    // Streaks
+    for (var sti = 0; sti < streaks.length; sti++) {
+      var st = streaks[sti];
+      st.angle += st.speed;
+      var x1 = CX + Math.cos(st.angle) * st.r;
+      var y1 = CY + Math.sin(st.angle) * st.r;
+      var x2 = CX + Math.cos(st.angle + 0.15) * (st.r + st.len);
+      var y2 = CY + Math.sin(st.angle + 0.15) * (st.r + st.len);
+      var lg = ctx.createLinearGradient(x1, y1, x2, y2);
+      var col = st.isRed ? 'rgba(199,33,44,' : 'rgba(191,150,115,';
+      lg.addColorStop(0,   col + '0)');
+      lg.addColorStop(0.5, col + st.alpha.toFixed(2) + ')');
+      lg.addColorStop(1,   col + '0)');
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = lg;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+
+    // Orbs
+    for (var oi = 0; oi < orbs.length; oi++) {
+      var o = orbs[oi];
+      o.angle += o.speed;
+      var ox = CX + Math.cos(o.angle) * o.r;
+      var oy = CY + Math.sin(o.angle) * o.r;
+      var opulse = 1 + Math.sin(t * 2 + o.angle) * 0.3;
+      var ocol = o.isRed ? 'rgba(199,33,44,' : 'rgba(191,150,115,';
+      ctx.beginPath();
+      ctx.arc(ox, oy, o.size * opulse, 0, Math.PI * 2);
+      ctx.fillStyle = ocol + '0.8)';
+      ctx.shadowColor = ocol + '1)';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Center pulse
+    var cp = 1 + Math.sin(t * 2.5) * 0.25;
+    var cgrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 18 * cp);
+    cgrad.addColorStop(0,   'rgba(255,255,255,0.9)');
+    cgrad.addColorStop(0.4, 'rgba(191,150,115,0.7)');
+    cgrad.addColorStop(1,   'rgba(199,33,44,0)');
+    ctx.beginPath();
+    ctx.arc(CX, CY, 18 * cp, 0, Math.PI * 2);
+    ctx.fillStyle = cgrad;
+    ctx.shadowColor = 'rgba(191,150,115,1)';
+    ctx.shadowBlur = 30;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+})();
+</script>
 </body>
 </html>
