@@ -2,9 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-  <title>Premium Loader v2</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&display=swap" rel="stylesheet">
+  <title>Premium Loader v5 Magnifier</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -14,309 +12,472 @@
       align-items: center;
       height: 100vh;
       overflow: hidden;
-      font-family: 'Cormorant Garamond', Georgia, serif;
     }
     canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
-    .ui {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
+
+    /* Logo rendered offscreen, we draw it via canvas */
+    #logo-img {
+      position: fixed;
+      opacity: 0;
       pointer-events: none;
+      top: -9999px;
     }
-    .eyebrow {
-      font-size: 10px;
-      letter-spacing: 7px;
-      text-transform: uppercase;
-      color: rgba(191,150,115,0.5);
-      animation: fadeUp 1s ease both;
-    }
-    .brand {
-      font-size: 58px;
-      font-weight: 300;
-      color: #fff;
-      letter-spacing: 12px;
-      text-transform: uppercase;
-      animation: fadeUp 1.2s ease both;
-    }
-    .brand em { font-style: normal; color: #BF9673; }
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: fadeUp 1.4s ease both;
-    }
-    .divider-line {
-      width: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, #BF9673);
-      animation: growLine 1.8s 0.6s ease forwards;
-    }
-    .divider-line.right { background: linear-gradient(90deg, #BF9673, transparent); }
-    .divider-diamond {
-      width: 5px; height: 5px;
-      background: #C7212C;
-      transform: rotate(45deg);
-      box-shadow: 0 0 8px #C7212C;
-    }
-    @keyframes growLine { to { width: 80px; } }
-    .sub {
-      font-size: 12px;
-      letter-spacing: 4px;
-      color: rgba(255,255,255,0.25);
-      text-transform: uppercase;
-      animation: fadeUp 1.6s ease both;
-    }
-    .status {
-      font-size: 10px;
-      letter-spacing: 3px;
-      color: rgba(191,150,115,0.4);
-      text-transform: uppercase;
-      animation: fadeUp 1.8s ease both, pulse 2.5s 2s ease-in-out infinite;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%,100% { opacity: 0.4; }
-      50%      { opacity: 0.9; }
+
+    /* Sphere canvas on top */
+    #sphere-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="ui">
-  <div class="eyebrow">Легализация в Польше</div>
-  <div class="brand">AVI<em>N</em>O</div>
-  <div class="divider">
-    <div class="divider-line"></div>
-    <div class="divider-diamond"></div>
-    <div class="divider-line right"></div>
-  </div>
-  <div class="sub">Польша · Украина · Документы</div>
-  <div class="status">Загрузка...</div>
-</div>
+<img id="logo-img" src="logo.png" crossorigin="anonymous" alt="logo" />
+<canvas id="sphere-canvas"></canvas>
 
 <script>
 (function() {
   var canvas = document.getElementById('c');
-  var ctx = canvas.getContext('2d');
+  var ctx    = canvas.getContext('2d');
+  var sc     = document.getElementById('sphere-canvas');
+  var sctx   = sc.getContext('2d');
+  var logoImg = document.getElementById('logo-img');
+
   var W, H, CX, CY;
+  var LOGO_SIZE = 90;
 
   function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-    CX = W / 2;
-    CY = H / 2;
+    W = canvas.width = sc.width = window.innerWidth;
+    H = canvas.height = sc.height = window.innerHeight;
+    CX = W / 2; CY = H / 2;
   }
   resize();
   window.addEventListener('resize', resize);
 
+  // ── Speed state ────────────────────────────────────────────────────────────
+  function makeSpeedState(base) {
+    return { base: base, current: base, target: base*(0.3+Math.random()*2.5),
+             timer: 0, interval: 20+Math.random()*60 };
+  }
+  function tickSpeed(ss) {
+    ss.timer++;
+    if (ss.timer >= ss.interval) {
+      ss.timer = 0;
+      ss.interval = 20 + Math.random()*60;
+      ss.target = ss.base * (0.2 + Math.random()*3.0);
+    }
+    ss.current += (ss.target - ss.current) * 0.06;
+    return ss.current;
+  }
+
+  // ── Aurora bands ───────────────────────────────────────────────────────────
   var bands = [];
-  for (var i = 0; i < 6; i++) {
+  for (var i = 0; i < 7; i++) {
     bands.push({
-      offset: i * 0.9,
-      speed: 0.003 + i * 0.001,
-      color: i % 2 === 0 ? [38, 52, 102] : [191, 150, 115],
-      amp: 60 + i * 15,
-      freq: 0.6 + i * 0.2,
-      alpha: 0.04 + i * 0.01
+      offset: i*0.9, ss: makeSpeedState(0.003+i*0.001),
+      color: i%3===0?[38,52,102]:(i%3===1?[191,150,115]:[30,40,90]),
+      amp: 55+i*14, freq: 0.5+i*0.2, alpha: 0.035+i*0.01
     });
   }
 
-  var RING_N = 200;
-  var ringPhase = 0;
-
+  // ── Stars ──────────────────────────────────────────────────────────────────
   var stars = [];
-  for (var j = 0; j < 80; j++) {
-    stars.push({
-      x: Math.random() * 2000 - 1000,
-      y: Math.random() * 2000 - 1000,
-      r: Math.random() * 1.2 + 0.3,
-      alpha: 0.1 + Math.random() * 0.4,
-      twinkle: Math.random() * Math.PI * 2,
-      speed: 0.01 + Math.random() * 0.03
-    });
+  for (var j = 0; j < 90; j++) {
+    stars.push({ x: Math.random()*2000-1000, y: Math.random()*2000-1000,
+      r: Math.random()*1.2+0.3, alpha: 0.1+Math.random()*0.4,
+      twinkle: Math.random()*Math.PI*2, ss: makeSpeedState(0.01+Math.random()*0.03) });
   }
 
+  // ── Streaks ────────────────────────────────────────────────────────────────
   var streaks = [];
-  for (var k = 0; k < 12; k++) {
-    streaks.push({
-      angle: (k / 12) * Math.PI * 2,
-      len: 30 + Math.random() * 50,
-      speed: 0.004 + Math.random() * 0.006,
-      r: 170 + Math.random() * 40,
-      alpha: 0.15 + Math.random() * 0.25,
-      isRed: k % 3 === 0
-    });
+  for (var k = 0; k < 14; k++) {
+    streaks.push({ angle: (k/14)*Math.PI*2, len: 28+Math.random()*55,
+      ss: makeSpeedState(0.004+Math.random()*0.006), r: 165+Math.random()*45,
+      alpha: 0.15+Math.random()*0.25, type: k%3 });
   }
 
+  // ── Orbs ───────────────────────────────────────────────────────────────────
   var orbs = [];
-  for (var m = 0; m < 5; m++) {
-    orbs.push({
-      angle: (m / 5) * Math.PI * 2,
-      r: 100 + m * 18,
-      speed: 0.006 + m * 0.002,
-      size: 3 + m * 1.5,
-      isRed: m % 2 !== 0
-    });
+  for (var m = 0; m < 6; m++) {
+    orbs.push({ angle: (m/6)*Math.PI*2, r: 95+m*16,
+      ss: makeSpeedState(0.006+m*0.002), size: 3+m*1.3, type: m%3 });
   }
 
-  var t = 0;
+  // ── Rings ──────────────────────────────────────────────────────────────────
+  var ringGoldSS = makeSpeedState(0.018);
+  var ringRedSS  = makeSpeedState(0.014);
+  var ringBlueSS = makeSpeedState(0.012);
+  var ringPhase = 0, blueRingPhase = 0, redRingPhase = 0;
+  var RING_N = 200;
+  var t = 0, tSS = makeSpeedState(0.01);
 
+  // ── SPHERE / MAGNIFIER ─────────────────────────────────────────────────────
+  var sphere = {
+    ax: 180, ay: 120,
+    fx: 1.0, fy: 2.0,
+    phase: 0,
+    normalSpeed: makeSpeedState(0.008),
+    currentSpeed: 0.008,
+    radius: 42,
+    x: 0, y: 0,
+    particles: (function() {
+      var arr = [];
+      for (var p = 0; p < 24; p++) {
+        arr.push({ angle: Math.random()*Math.PI*2, dist: Math.random()*0.75,
+          speed: makeSpeedState(0.02+Math.random()*0.04),
+          size: 1+Math.random()*2, type: p%3 });
+      }
+      return arr;
+    })()
+  };
+
+  // Offscreen canvas to hold logo for pixel sampling
+  var offCanvas = document.createElement('canvas');
+  offCanvas.width = LOGO_SIZE; offCanvas.height = LOGO_SIZE;
+  var offCtx = offCanvas.getContext('2d');
+  var logoLoaded = false;
+
+  logoImg.onload = function() {
+    offCtx.clearRect(0, 0, LOGO_SIZE, LOGO_SIZE);
+    offCtx.drawImage(logoImg, 0, 0, LOGO_SIZE, LOGO_SIZE);
+    logoLoaded = true;
+  };
+  // Try triggering if already cached
+  if (logoImg.complete && logoImg.naturalWidth > 0) {
+    offCtx.drawImage(logoImg, 0, 0, LOGO_SIZE, LOGO_SIZE);
+    logoLoaded = true;
+  }
+
+  function getSpherePos(ph) {
+    return {
+      x: CX + sphere.ax * Math.sin(sphere.fx * ph),
+      y: CY + sphere.ay * Math.sin(sphere.fy * ph + Math.PI/4)
+    };
+  }
+
+  // ── Draw "Loading" text in center ─────────────────────────────────────────
+  function drawLoadingText() {
+    sctx.save();
+    var dots = Math.floor(t * 2.0) % 4;
+    var dotStr = '.'.repeat(dots);
+    sctx.font = 'bold 18px "Segoe UI", Arial, sans-serif';
+    sctx.letterSpacing = '4px';
+    sctx.textAlign = 'center';
+    sctx.textBaseline = 'middle';
+    // Glow
+    sctx.shadowColor = 'rgba(191,150,115,0.9)';
+    sctx.shadowBlur = 18;
+    var grad = sctx.createLinearGradient(CX - 60, CY, CX + 60, CY);
+    grad.addColorStop(0,   '#BF9673');
+    grad.addColorStop(0.5, '#ffffff');
+    grad.addColorStop(1,   '#BF9673');
+    sctx.fillStyle = grad;
+    sctx.fillText('LOADING' + dotStr, CX, CY);
+    sctx.shadowBlur = 0;
+    sctx.restore();
+  }
+
+  // ── Draw magnifier sphere ──────────────────────────────────────────────────
+  function drawSphere(pos, overlap) {
+    sctx.clearRect(0, 0, W, H);
+    var x = pos.x, y = pos.y, R = sphere.radius;
+
+    // ── Draw "Loading" text in center (fixed, no logo) ───────────────────────
+    drawLoadingText();
+
+    // ── Draw logo INSIDE sphere — animated (bob + gentle rotate) ─────────────
+    var logoDrawSize = R * 1.45; // fixed size, no scaling
+    // Bob: small vertical oscillation
+    var bobY = Math.sin(t * 1.8) * (R * 0.12);
+    // Sway: small horizontal oscillation (offset phase)
+    var swayX = Math.sin(t * 1.1 + 1.2) * (R * 0.07);
+    // Gentle rotation angle
+    var logoRot = Math.sin(t * 0.7) * 0.18; // ±~10 degrees
+
+    sctx.save();
+    sctx.beginPath();
+    sctx.arc(x, y, R - 1.5, 0, Math.PI*2);
+    sctx.clip();
+
+    if (logoLoaded) {
+      // Translate to sphere center + bob/sway, rotate, draw centered
+      sctx.translate(x + swayX, y + bobY);
+      sctx.rotate(logoRot);
+      // Pulse scale: subtle breathe effect
+      var pulse = 1 + Math.sin(t * 2.5) * 0.04;
+      sctx.scale(pulse, pulse);
+      sctx.drawImage(offCanvas,
+        -logoDrawSize / 2,
+        -logoDrawSize / 2,
+        logoDrawSize, logoDrawSize
+      );
+    } else {
+      // Fallback: gold circle placeholder
+      sctx.translate(x, y + bobY);
+      sctx.fillStyle = 'rgba(191,150,115,0.4)';
+      sctx.beginPath(); sctx.arc(0, 0, R * 0.5, 0, Math.PI*2); sctx.fill();
+    }
+    sctx.restore();
+
+    // Subtle warm tint overlay inside sphere
+    sctx.save();
+    sctx.beginPath();
+    sctx.arc(x, y, R - 1.5, 0, Math.PI*2);
+    sctx.clip();
+    var tint = sctx.createRadialGradient(x, y, 0, x, y, R);
+    tint.addColorStop(0,   'rgba(191,150,115,0.10)');
+    tint.addColorStop(0.7, 'rgba(199,33,44,0.05)');
+    tint.addColorStop(1,   'rgba(0,0,0,0)');
+    sctx.fillStyle = tint;
+    sctx.fillRect(x-R, y-R, R*2, R*2);
+    sctx.restore();
+
+    // ── Latitude / longitude lines ────────────────────────────────────────────
+    sctx.save();
+    sctx.beginPath();
+    sctx.arc(x, y, R-1, 0, Math.PI*2);
+    sctx.clip();
+    sctx.strokeStyle = 'rgba(191,150,115,0.22)';
+    sctx.lineWidth = 0.6;
+    for (var li = -1; li <= 1; li++) {
+      var ly2 = y + li * R * 0.45;
+      var lhw = Math.sqrt(Math.max(0, R*R - (ly2-y)*(ly2-y)));
+      sctx.beginPath();
+      sctx.ellipse(x, ly2, lhw, lhw*0.28, 0, 0, Math.PI*2);
+      sctx.stroke();
+    }
+    sctx.beginPath(); sctx.ellipse(x, y, R*0.28, R, 0, 0, Math.PI*2); sctx.stroke();
+    sctx.beginPath(); sctx.ellipse(x, y, R*0.6,  R, 0, 0, Math.PI*2); sctx.stroke();
+    sctx.restore();
+
+    // ── Particles inside sphere (always spin, brighter when over logo) ────────
+    sctx.save();
+    sctx.beginPath();
+    sctx.arc(x, y, R-2, 0, Math.PI*2);
+    sctx.clip();
+    for (var pi = 0; pi < sphere.particles.length; pi++) {
+      var p = sphere.particles[pi];
+      p.angle += tickSpeed(p.speed) * (0.3 + overlap * 0.7);
+      var pr = p.dist * (R - 5);
+      var px = x + Math.cos(p.angle) * pr;
+      var py = y + Math.sin(p.angle) * pr * 0.6;
+      var palpha = 0.15 + overlap * (0.4 + Math.sin(p.angle*3 + t)*0.35);
+      var pcol = p.type===1?'rgba(199,33,44,':(p.type===2?'rgba(38,52,102,':'rgba(191,150,115,');
+      sctx.beginPath();
+      sctx.arc(px, py, p.size, 0, Math.PI*2);
+      sctx.fillStyle = pcol + Math.min(1, palpha).toFixed(2) + ')';
+      sctx.shadowColor = pcol + '1)';
+      sctx.shadowBlur = 5;
+      sctx.fill();
+      sctx.shadowBlur = 0;
+    }
+    sctx.restore();
+
+    // ── Glass sphere border & specular ────────────────────────────────────────
+    // Glass fill (always visible, semi-transparent)
+    var glassFill = sctx.createRadialGradient(x-R*0.25, y-R*0.25, R*0.05, x, y, R);
+    glassFill.addColorStop(0,    'rgba(255,255,255,0.08)');
+    glassFill.addColorStop(0.4,  'rgba(191,150,115,0.06)');
+    glassFill.addColorStop(0.75, 'rgba(38,52,102,0.12)');
+    glassFill.addColorStop(1,    'rgba(8,8,16,0.30)');
+    sctx.beginPath(); sctx.arc(x, y, R, 0, Math.PI*2);
+    sctx.fillStyle = glassFill; sctx.fill();
+
+    // Outer glow
+    var glow = sctx.createRadialGradient(x, y, R*0.5, x, y, R*1.7);
+    glow.addColorStop(0,   'rgba(191,150,115,0.0)');
+    glow.addColorStop(0.5, 'rgba(191,150,115,0.07)');
+    glow.addColorStop(1,   'rgba(191,150,115,0.0)');
+    sctx.beginPath(); sctx.arc(x, y, R*1.7, 0, Math.PI*2);
+    sctx.fillStyle = glow; sctx.fill();
+
+    // Border
+    sctx.beginPath(); sctx.arc(x, y, R, 0, Math.PI*2);
+    var borderGrad = sctx.createLinearGradient(x-R, y-R, x+R, y+R);
+    borderGrad.addColorStop(0,   'rgba(191,150,115,0.95)');
+    borderGrad.addColorStop(0.4, 'rgba(199,33,44,0.65)');
+    borderGrad.addColorStop(1,   'rgba(38,52,102,0.45)');
+    sctx.strokeStyle = borderGrad;
+    sctx.lineWidth = 1.8;
+    sctx.shadowColor = 'rgba(191,150,115,0.9)';
+    sctx.shadowBlur = 16;
+    sctx.stroke(); sctx.shadowBlur = 0;
+
+    // Specular highlight
+    var spec = sctx.createRadialGradient(x-R*0.35, y-R*0.38, 0, x-R*0.35, y-R*0.38, R*0.45);
+    spec.addColorStop(0,   'rgba(255,255,255,0.55)');
+    spec.addColorStop(0.5, 'rgba(255,255,255,0.07)');
+    spec.addColorStop(1,   'rgba(255,255,255,0)');
+    sctx.beginPath(); sctx.arc(x, y, R, 0, Math.PI*2);
+    sctx.fillStyle = spec; sctx.fill();
+
+    // Bottom reflection
+    var refl = sctx.createRadialGradient(x+R*0.2, y+R*0.6, 0, x+R*0.2, y+R*0.6, R*0.3);
+    refl.addColorStop(0,   'rgba(255,255,255,0.12)');
+    refl.addColorStop(1,   'rgba(255,255,255,0)');
+    sctx.beginPath(); sctx.arc(x, y, R, 0, Math.PI*2);
+    sctx.fillStyle = refl; sctx.fill();
+  }
+
+  // ── Main loop ──────────────────────────────────────────────────────────────
   function loop() {
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#080810';
     ctx.fillRect(0, 0, W, H);
 
-    t += 0.01;
-    ringPhase += 0.018;
+    t += tickSpeed(tSS);
+    ringPhase      += tickSpeed(ringGoldSS);
+    redRingPhase   += tickSpeed(ringRedSS);
+    blueRingPhase  += tickSpeed(ringBlueSS);
 
     // Aurora
     for (var bi = 0; bi < bands.length; bi++) {
       var b = bands[bi];
-      b.offset += b.speed;
-      ctx.beginPath();
-      ctx.moveTo(0, CY);
-      for (var x = 0; x <= W; x += 4) {
-        var y = CY
-          + Math.sin((x / W) * Math.PI * b.freq + b.offset + t) * b.amp
-          + Math.sin((x / W) * Math.PI * b.freq * 2 + b.offset * 1.3) * b.amp * 0.4;
-        ctx.lineTo(x, y);
+      b.offset += tickSpeed(b.ss);
+      ctx.beginPath(); ctx.moveTo(0, CY);
+      for (var bx = 0; bx <= W; bx += 4) {
+        var by = CY
+          + Math.sin((bx/W)*Math.PI*b.freq + b.offset + t) * b.amp
+          + Math.sin((bx/W)*Math.PI*b.freq*2 + b.offset*1.3) * b.amp*0.4;
+        ctx.lineTo(bx, by);
       }
-      ctx.lineTo(W, H);
-      ctx.lineTo(0, H);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(' + b.color[0] + ',' + b.color[1] + ',' + b.color[2] + ',' + b.alpha + ')';
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      ctx.fillStyle = 'rgba('+b.color[0]+','+b.color[1]+','+b.color[2]+','+b.alpha+')';
       ctx.fill();
     }
 
     // Center glow
-    var cg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 320);
-    cg.addColorStop(0, 'rgba(38,52,102,0.35)');
-    cg.addColorStop(0.4, 'rgba(191,150,115,0.06)');
-    cg.addColorStop(1, 'rgba(8,8,16,0)');
-    ctx.fillStyle = cg;
-    ctx.fillRect(0, 0, W, H);
+    var cg = ctx.createRadialGradient(CX, CY, 0, CX, CY, 340);
+    cg.addColorStop(0,   'rgba(38,52,102,0.4)');
+    cg.addColorStop(0.3, 'rgba(30,40,90,0.15)');
+    cg.addColorStop(0.6, 'rgba(191,150,115,0.05)');
+    cg.addColorStop(1,   'rgba(8,8,16,0)');
+    ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
 
     // Stars
     for (var si = 0; si < stars.length; si++) {
       var s = stars[si];
-      s.twinkle += s.speed;
-      var sa = s.alpha * (0.5 + Math.sin(s.twinkle) * 0.5);
-      ctx.beginPath();
-      ctx.arc(CX + s.x, CY + s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,' + sa.toFixed(3) + ')';
-      ctx.fill();
+      s.twinkle += tickSpeed(s.ss);
+      var sa = s.alpha * (0.5 + Math.sin(s.twinkle)*0.5);
+      ctx.beginPath(); ctx.arc(CX+s.x, CY+s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,'+sa.toFixed(3)+')'; ctx.fill();
     }
 
-    // Liquid ring
-    ctx.save();
-    ctx.translate(CX, CY);
+    ctx.save(); ctx.translate(CX, CY);
 
-    var halo = ctx.createRadialGradient(0, 0, 85, 0, 0, 140);
-    halo.addColorStop(0, 'rgba(191,150,115,0)');
-    halo.addColorStop(0.5, 'rgba(191,150,115,0.08)');
-    halo.addColorStop(1, 'rgba(8,8,16,0)');
+    // Halo
+    var halo = ctx.createRadialGradient(0,0,80,0,0,155);
+    halo.addColorStop(0,   'rgba(38,52,102,0)');
+    halo.addColorStop(0.4, 'rgba(38,52,102,0.12)');
+    halo.addColorStop(0.8, 'rgba(191,150,115,0.06)');
+    halo.addColorStop(1,   'rgba(8,8,16,0)');
     ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(0, 0, 140, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,155,0,Math.PI*2); ctx.fill();
 
+    // Blue outer ring
+    ctx.beginPath();
+    for (var bri = 0; bri <= RING_N; bri++) {
+      var bra = (bri/RING_N)*Math.PI*2;
+      var brwave = Math.sin(bra*3+blueRingPhase)*8 + Math.sin(bra*6-blueRingPhase*0.8)*4;
+      var brrr = 128+brwave;
+      var brx2 = Math.cos(bra)*brrr, bry3 = Math.sin(bra)*brrr;
+      bri===0 ? ctx.moveTo(brx2,bry3) : ctx.lineTo(brx2,bry3);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(38,52,102,0.7)'; ctx.lineWidth = 1.2;
+    ctx.shadowColor = 'rgba(38,52,102,1)'; ctx.shadowBlur = 18;
+    ctx.stroke(); ctx.shadowBlur = 0;
+
+    // Gold ring
     ctx.beginPath();
     for (var ri = 0; ri <= RING_N; ri++) {
-      var ra = (ri / RING_N) * Math.PI * 2;
-      var wave = Math.sin(ra * 4 + ringPhase) * 10
-               + Math.sin(ra * 7 - ringPhase * 1.3) * 5
-               + Math.sin(ra * 2 + t) * 7;
-      var rr = 100 + wave;
-      var rx = Math.cos(ra) * rr;
-      var ry = Math.sin(ra) * rr;
-      ri === 0 ? ctx.moveTo(rx, ry) : ctx.lineTo(rx, ry);
+      var ra = (ri/RING_N)*Math.PI*2;
+      var wave = Math.sin(ra*4+ringPhase)*10 + Math.sin(ra*7-ringPhase*1.3)*5 + Math.sin(ra*2+t)*7;
+      var rr = 100+wave;
+      var rx = Math.cos(ra)*rr, ry = Math.sin(ra)*rr;
+      ri===0 ? ctx.moveTo(rx,ry) : ctx.lineTo(rx,ry);
     }
     ctx.closePath();
-    var ringGrad = ctx.createLinearGradient(-100, -100, 100, 100);
+    var ringGrad = ctx.createLinearGradient(-100,-100,100,100);
     ringGrad.addColorStop(0,   'rgba(191,150,115,1)');
-    ringGrad.addColorStop(0.3, 'rgba(199,33,44,0.9)');
-    ringGrad.addColorStop(0.6, 'rgba(191,150,115,0.7)');
+    ringGrad.addColorStop(0.25,'rgba(199,33,44,0.9)');
+    ringGrad.addColorStop(0.55,'rgba(38,52,102,0.8)');
+    ringGrad.addColorStop(0.8, 'rgba(191,150,115,0.7)');
     ringGrad.addColorStop(1,   'rgba(38,52,102,0.5)');
-    ctx.strokeStyle = ringGrad;
-    ctx.lineWidth = 1.8;
-    ctx.shadowColor = 'rgba(191,150,115,0.8)';
-    ctx.shadowBlur = 22;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = ringGrad; ctx.lineWidth = 1.8;
+    ctx.shadowColor = 'rgba(191,150,115,0.8)'; ctx.shadowBlur = 22;
+    ctx.stroke(); ctx.shadowBlur = 0;
 
+    // Red inner ring
     ctx.beginPath();
     for (var ii = 0; ii <= RING_N; ii++) {
-      var ia = (ii / RING_N) * Math.PI * 2;
-      var iwave = Math.sin(ia * 5 - ringPhase * 1.1) * 6
-                + Math.sin(ia * 3 + ringPhase * 0.7) * 4;
-      var irr = 72 + iwave;
-      var ix = Math.cos(ia) * irr;
-      var iy = Math.sin(ia) * irr;
-      ii === 0 ? ctx.moveTo(ix, iy) : ctx.lineTo(ix, iy);
+      var ia = (ii/RING_N)*Math.PI*2;
+      var iwave = Math.sin(ia*5-redRingPhase*1.1)*6 + Math.sin(ia*3+redRingPhase*0.7)*4;
+      var irr = 72+iwave;
+      var ix = Math.cos(ia)*irr, iy = Math.sin(ia)*irr;
+      ii===0 ? ctx.moveTo(ix,iy) : ctx.lineTo(ix,iy);
     }
     ctx.closePath();
-    ctx.strokeStyle = 'rgba(199,33,44,0.35)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    ctx.strokeStyle = 'rgba(199,33,44,0.4)'; ctx.lineWidth = 1; ctx.stroke();
     ctx.restore();
 
     // Streaks
     for (var sti = 0; sti < streaks.length; sti++) {
       var st = streaks[sti];
-      st.angle += st.speed;
-      var x1 = CX + Math.cos(st.angle) * st.r;
-      var y1 = CY + Math.sin(st.angle) * st.r;
-      var x2 = CX + Math.cos(st.angle + 0.15) * (st.r + st.len);
-      var y2 = CY + Math.sin(st.angle + 0.15) * (st.r + st.len);
-      var lg = ctx.createLinearGradient(x1, y1, x2, y2);
-      var col = st.isRed ? 'rgba(199,33,44,' : 'rgba(191,150,115,';
-      lg.addColorStop(0,   col + '0)');
-      lg.addColorStop(0.5, col + st.alpha.toFixed(2) + ')');
-      lg.addColorStop(1,   col + '0)');
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.strokeStyle = lg;
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
+      st.angle += tickSpeed(st.ss);
+      var x1 = CX+Math.cos(st.angle)*st.r, y1 = CY+Math.sin(st.angle)*st.r;
+      var x2 = CX+Math.cos(st.angle+0.15)*(st.r+st.len), y2 = CY+Math.sin(st.angle+0.15)*(st.r+st.len);
+      var lg = ctx.createLinearGradient(x1,y1,x2,y2);
+      var col = st.type===1?'rgba(199,33,44,':(st.type===2?'rgba(38,52,102,':'rgba(191,150,115,');
+      lg.addColorStop(0, col+'0)'); lg.addColorStop(0.5, col+st.alpha.toFixed(2)+')'); lg.addColorStop(1, col+'0)');
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+      ctx.strokeStyle = lg; ctx.lineWidth = 1.2; ctx.stroke();
     }
 
     // Orbs
     for (var oi = 0; oi < orbs.length; oi++) {
       var o = orbs[oi];
-      o.angle += o.speed;
-      var ox = CX + Math.cos(o.angle) * o.r;
-      var oy = CY + Math.sin(o.angle) * o.r;
-      var opulse = 1 + Math.sin(t * 2 + o.angle) * 0.3;
-      var ocol = o.isRed ? 'rgba(199,33,44,' : 'rgba(191,150,115,';
-      ctx.beginPath();
-      ctx.arc(ox, oy, o.size * opulse, 0, Math.PI * 2);
-      ctx.fillStyle = ocol + '0.8)';
-      ctx.shadowColor = ocol + '1)';
-      ctx.shadowBlur = 12;
-      ctx.fill();
-      ctx.shadowBlur = 0;
+      o.angle += tickSpeed(o.ss);
+      var ox = CX+Math.cos(o.angle)*o.r, oy = CY+Math.sin(o.angle)*o.r;
+      var opulse = 1+Math.sin(t*2+o.angle)*0.3;
+      var ocol = o.type===1?'rgba(199,33,44,':(o.type===2?'rgba(38,52,102,':'rgba(191,150,115,');
+      var oglowcol = o.type===1?'rgba(199,33,44,1)':(o.type===2?'rgba(38,52,102,1)':'rgba(191,150,115,1)');
+      ctx.beginPath(); ctx.arc(ox,oy,o.size*opulse,0,Math.PI*2);
+      ctx.fillStyle = ocol+'0.85)';
+      ctx.shadowColor = oglowcol; ctx.shadowBlur = 14;
+      ctx.fill(); ctx.shadowBlur = 0;
     }
 
-    // Center pulse
-    var cp = 1 + Math.sin(t * 2.5) * 0.25;
-    var cgrad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 18 * cp);
-    cgrad.addColorStop(0,   'rgba(255,255,255,0.9)');
-    cgrad.addColorStop(0.4, 'rgba(191,150,115,0.7)');
-    cgrad.addColorStop(1,   'rgba(199,33,44,0)');
-    ctx.beginPath();
-    ctx.arc(CX, CY, 18 * cp, 0, Math.PI * 2);
-    ctx.fillStyle = cgrad;
-    ctx.shadowColor = 'rgba(191,150,115,1)';
-    ctx.shadowBlur = 30;
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    // ── Sphere position & speed ───────────────────────────────────────────────
+    // Compute overlap BEFORE moving to decide speed
+    var prePos = getSpherePos(sphere.phase);
+    var dx = prePos.x - CX, dy = prePos.y - CY;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    var logoR = LOGO_SIZE / 2;
+    var overlapDist = (sphere.radius + logoR) - dist;
+    var overlap = Math.max(0, Math.min(1, overlapDist / (sphere.radius + logoR * 0.8)));
+
+    // Slow down when near logo
+    var targetSpeed = overlap > 0.05
+      ? sphere.normalSpeed.base * (0.08 + (1 - overlap) * 0.25)
+      : tickSpeed(sphere.normalSpeed);
+    sphere.currentSpeed += (targetSpeed - sphere.currentSpeed) * 0.04;
+    sphere.phase += sphere.currentSpeed;
+
+    var spos = getSpherePos(sphere.phase);
+    sphere.x = spos.x; sphere.y = spos.y;
+
+    // Recompute overlap at new position
+    var dx2 = sphere.x - CX, dy2 = sphere.y - CY;
+    var dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+    var overlapDist2 = (sphere.radius + logoR) - dist2;
+    var overlap2 = Math.max(0, Math.min(1, overlapDist2 / (sphere.radius + logoR * 0.8)));
+
+    drawSphere(spos, overlap2);
 
     requestAnimationFrame(loop);
   }
